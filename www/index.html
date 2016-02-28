@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <meta http-equiv="Content-Security-Policy"
+          content="default-src 'self' data: gap: https://ssl.gstatic.com 'unsafe-eval'; style-src 'self' 'unsafe-inline'; media-src *">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="msapplication-tap-highlight" content="no">
+    <meta name="viewport"
+          content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width">
+    <link rel="stylesheet" href="css/foundation.css"/>
+    <link rel="stylesheet" href="css/foundation-icons.css"/>
+    <link rel="stylesheet" href="css/index.css"/>
+    <title>任务管理</title>
+</head>
+<body>
+<div id="page">
+</div>
+
+<script id="taskListFragement" type="art-template">
+    <div class="primary title-bar">
+        <div class="center title">任务列表</div>
+        <span class="right"><button class="fi-plus" onclick="route.go('/createTask')"></button></span>
+    </div>
+    <ul class="list">
+        {{each tasks as task}}
+
+        {{if task.state == 'TODO'}}
+        <li class="list-item" onclick="taskListPage.onTaskItemClick(event, '{{task.id}}')">
+            <span class="list-item-text left">{{task.taskDesc}}</span>
+
+            <!--<span class="right"><button class="fi-plus" onclick="route.go('/createTask')"></button></span>
+            -->
+            <button class="list-item-button button right" data="finishButton">标为完成</button>
+        </li>
+        {{else}}
+        <li class="list-item task-finished" onclick="taskListPage.onTaskItemClick(event, '{{task.id}}')">
+            <span class="list-item-text left">{{task.taskDesc}}</span>
+        </li>
+        {{/if}}
+
+        {{/each}}
+    </ul>
+</script>
+
+<script id="createTaskFragement" type="art-template">
+    <div class="primary title-bar">
+        <div class="center title">新建任务</div>
+        <span class="left"><button onclick="route.go('/taskList')">返回</button></span>
+    </div>
+    <br/>
+
+    <div class="columns">
+        <form id="createTaskForm" onsubmit="createTaskPage.onSubmit(this)">
+            <div class="form-body">
+                <div class="row">
+                    <label>任务描述
+                        <input type="text" id="taskDesc" name="taskDesc" class="line"/>
+                    </label>
+                </div>
+            </div>
+            <div class="form-bottom">
+                <input class='button full-button' type="submit" value="保存"/>
+            </div>
+        </form>
+    </div>
+</script>
+
+<script id="viewTaskFragement" type="art-template">
+    <div class="primary title-bar">
+        <div class="center title">任务详情</div>
+        <span class="left"><button onclick="route.go('/taskList')">返回</button></span>
+    </div>
+
+    <div class="block">
+        <p class="break-all text-block">{{taskDesc}}</p>
+    </div>
+
+    <div class="columns">
+        {{if state == 'TODO'}}
+        <input class='button full-button' onclick="viewTaskPage.finishTask('{{id}}')" value="标为已读"/>
+        {{/if}}
+        <input class='button full-button' onclick="viewTaskPage.deleteTask('{{id}}')" value="删除"/>
+    </div>
+</script>
+
+<script type="text/javascript" src="cordova.js"></script>
+
+<script src="js/jq.mobi.js"></script>
+<script src="js/flqurl.js"></script>
+<script src="js/template.js"></script>
+<script src="js/jsc.js"></script>
+<script src="js/base.js"></script>
+<script src="js/index.js"></script>
+
+</body>
+</html>
