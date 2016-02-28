@@ -9,9 +9,9 @@ var paths = {
     VIEW_TASK: '/viewTask'
 };
 
-var tasksCache = null;
+var tasksCache = jsc.createObjectArray([]);
 var dataPersistService = {};
-dataPersistService.initData = function(callback){
+dataPersistService.initData = function (callback) {
     tasksCache = tasksCache = jsc.createObjectArray([]);
     callback();
 };
@@ -34,7 +34,9 @@ dataPersistService.getTask = function (taskId, callback) {
         id: taskId
     }).getRecordData(0);
 
-    callback(task);
+    if(callback){
+        callback(task);
+    }
 };
 
 dataPersistService.deleteTask = function (taskId, callback) {
@@ -47,9 +49,9 @@ dataPersistService.deleteTask = function (taskId, callback) {
 
 dataPersistService.finishTask = function (taskId, callback) {
     tasksCache.find({
-       id : taskId
+        id: taskId
     }).update({
-        state : taskStates.finished
+        state: taskStates.finished
     });
 
     callback();
@@ -59,85 +61,144 @@ dataPersistService._createTaskId = function () {
     return new Date().getTime() + "_" + jsc.nextId();
 };
 
-var taskListPage = {};
-taskListPage.renderHtml = function (parentId) {
-    dataPersistService.getTasks(function (tasks) {
-        var html = template('taskListFragement', {
-            tasks: tasks
-        });
-        $("#" + parentId).html(html);
+// 预加载数据
+dataPersistService.initData(function () {
+    // route.start(paths.TASK_LIST, "page");
+});
 
-        $("#createTask").bind('click', function(){
-            route.go(paths.CREATE_TASK);
-        });
-    });
-};
+var Foo = Vue.extend({
+    template: '<p>This is foo!</p>'
+});
 
-taskListPage.onTaskItemClick = function (e, taskId) {
-    var data = $(e.target).attr("data");
-    if (data == 'finishButton') {
-        taskListPage.finishTask(taskId);
-    } else {
-        taskListPage.viewTask(taskId);
+var Bar = Vue.extend({
+    template: '<p>This is bar!</p>'
+});
+
+var TaskListComponent = Vue.extend({
+    template: '#taskListFragement',
+    data: function () {
+        return {
+            tasks: tasksCache.data()
+        }
+    },
+    methods: {
+        onTaskItemClick: function (e) {
+            var $ele = $(e.target);
+            var data = $ele.attr("data");
+            var taskId = $ele.attr("data-task-id");
+            if (!taskId) {
+                taskId = $ele.parent().attr("data-task-id");
+            }
+            jsc.log("点击任务,taskId=" + taskId);
+            if (data == 'finishButton') {
+                this.finishTask(taskId);
+            } else {
+                this.viewTask(taskId);
+            }
+        },
+
+        viewTask: function (taskId) {
+            router.go(paths.VIEW_TASK + "?id=" + taskId);
+        },
+
+        finishTask: function (taskId) {
+            dataPersistService.finishTask(taskId, function (data) {
+                router.go(paths.TASK_LIST);
+            });
+        }
+
+    }
+});
+
+var CreateTaskComponent = Vue.extend({
+    template: '#createTaskFragement',
+    methods: {
+        onSubmit: function (e) {
+            var formData = {};
+            formData.taskDesc = $("#taskDesc").val();
+
+            dataPersistService.createTask(function (data) {
+                router.go(paths.TASK_LIST);
+            }, formData);
+
+            e.preventDefault();
+        }
+    }
+});
+
+var ViewTaskComponent = Vue.extend({
+    template: '#viewTaskFragement',
+    data: function () {
+        var taskId = this.$route.query.id;
+        jsc.log("查看任务,taskId=" + taskId);
+        return {
+            id : "",
+            taskDesc : ""
+        };
+    },
+    route : {
+        data: function (transition) {
+            dataPersistService.getTask(transition.to.query.id, function(task){
+                transition.next(task);
+            });
+        }
+    },
+    methods: {
+        onSubmit: function () {
+            var formData = {};
+            formData.taskDesc = $("#taskDesc").val();
+
+            dataPersistService.createTask(function (data) {
+                router.go(paths.TASK_LIST);
+            }, formData);
+
+            return false;
+        },
+        onFinishTask : function(e){
+            var taskId = $(e.target).attr("data-task-id");
+            dataPersistService.finishTask(taskId, function (data) {
+                router.go(paths.TASK_LIST);
+            });
+        },
+
+        onDeleteTask : function(e){
+            var taskId = $(e.target).attr("data-task-id");
+            dataPersistService.deleteTask(taskId, function (data) {
+                router.go(paths.TASK_LIST);
+            });
+        }
+
+    }
+});
+
+var App = Vue.extend({
+});
+
+var router = new VueRouter();
+var routerMap = {
+    '/foo': {
+        component: Foo
+    },
+    '/bar': {
+        component: Bar
     }
 };
 
-taskListPage.finishTask = function (taskId, toTaskList) {
-    dataPersistService.finishTask(taskId, function (data) {
-        route.go(paths.TASK_LIST);
-    });
+routerMap[paths.TASK_LIST] = {
+    component: TaskListComponent
 };
 
-taskListPage.viewTask = function (taskId) {
-    route.go(paths.VIEW_TASK + "?id=" + taskId);
+routerMap[paths.CREATE_TASK] = {
+    component: CreateTaskComponent
 };
 
-var createTaskPage = {};
-createTaskPage.renderHtml = function (parentId) {
-    var html = template('createTaskFragement', {});
-    $("#" + parentId).html(html);
-
-    $("#save").bind('click', function(){
-        createTaskPage.onSubmit();
-    });
+routerMap[paths.VIEW_TASK] = {
+    component: ViewTaskComponent
 };
 
-createTaskPage.onSubmit = function () {
-    var formData = {};
-    formData.taskDesc = $("#taskDesc").val();
+router.map(routerMap);
 
-    dataPersistService.createTask(function (data) {
-        route.go(paths.TASK_LIST);
-    }, formData);
-};
+router.start(App, '#page');
+router.go(paths.TASK_LIST);
 
-var viewTaskPage = {};
-viewTaskPage.renderHtml = function (parentId, context) {
-    var taskId = context.getParamValue("id");
-    dataPersistService.getTask(taskId, function (data) {
-        var html = template('viewTaskFragement', data);
-        $("#" + parentId).html(html);
-    });
-};
 
-viewTaskPage.finishTask = function (taskId) {
-    dataPersistService.finishTask(taskId, function (data) {
-        route.go(paths.TASK_LIST);
-    });
-};
-
-viewTaskPage.deleteTask = function (taskId) {
-    dataPersistService.deleteTask(taskId, function () {
-        route.go(paths.TASK_LIST);
-    });
-};
-
-var route = jsc.createRoute();
-route.map(paths.TASK_LIST, taskListPage);
-route.map(paths.CREATE_TASK, createTaskPage);
-route.map(paths.VIEW_TASK, viewTaskPage);
-
-// 预加载数据
-dataPersistService.initData(function () {
-    route.start(paths.TASK_LIST, "page");
-});
