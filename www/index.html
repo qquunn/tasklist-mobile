@@ -20,7 +20,7 @@
 <script id="taskListFragement" type="art-template">
     <div class="primary title-bar">
         <div class="center title">任务列表</div>
-        <span class="right"><button class="fi-plus" onclick="route.go('/createTask')"></button></span>
+        <span class="right"><button class="fi-plus" id='createTask'></button></span>
     </div>
     <ul class="list">
         {{each tasks as task}}
@@ -51,7 +51,7 @@
     <br/>
 
     <div class="columns">
-        <form id="createTaskForm" onsubmit="createTaskPage.onSubmit(this)">
+        <form id="createTaskForm">
             <div class="form-body">
                 <div class="row">
                     <label>任务描述
@@ -60,7 +60,7 @@
                 </div>
             </div>
             <div class="form-bottom">
-                <input class='button full-button' type="submit" value="保存"/>
+                <input id="save" class='button full-button' type="button" value="保存"/>
             </div>
         </form>
     </div>

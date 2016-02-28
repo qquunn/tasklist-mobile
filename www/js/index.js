@@ -59,21 +59,6 @@ dataPersistService._createTaskId = function () {
     return new Date().getTime() + "_" + jsc.nextId();
 };
 
-var createTaskPage = {};
-createTaskPage.renderHtml = function (parentId) {
-    var html = template('createTaskFragement', {});
-    $("#" + parentId).html(html);
-};
-
-createTaskPage.onSubmit = function (form) {
-    var formData = {};
-    formData.taskDesc = $("#taskDesc").val();
-
-    dataPersistService.createTask(function (data) {
-        route.go(paths.TASK_LIST);
-    }, formData);
-};
-
 var taskListPage = {};
 taskListPage.renderHtml = function (parentId) {
     dataPersistService.getTasks(function (tasks) {
@@ -81,6 +66,10 @@ taskListPage.renderHtml = function (parentId) {
             tasks: tasks
         });
         $("#" + parentId).html(html);
+
+        $("#createTask").bind('click', function(){
+            route.go(paths.CREATE_TASK);
+        });
     });
 };
 
@@ -101,6 +90,25 @@ taskListPage.finishTask = function (taskId, toTaskList) {
 
 taskListPage.viewTask = function (taskId) {
     route.go(paths.VIEW_TASK + "?id=" + taskId);
+};
+
+var createTaskPage = {};
+createTaskPage.renderHtml = function (parentId) {
+    var html = template('createTaskFragement', {});
+    $("#" + parentId).html(html);
+
+    $("#save").bind('click', function(){
+        createTaskPage.onSubmit();
+    });
+};
+
+createTaskPage.onSubmit = function () {
+    var formData = {};
+    formData.taskDesc = $("#taskDesc").val();
+
+    dataPersistService.createTask(function (data) {
+        route.go(paths.TASK_LIST);
+    }, formData);
 };
 
 var viewTaskPage = {};
