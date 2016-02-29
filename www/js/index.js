@@ -25,7 +25,7 @@ dataPersistService.initData = function (callback) {
     this._db = window.openDatabase("tasklist", "1.0", "tasklist", 1000000);
 
     this._db.transaction(function (context) {
-        context.executeSql('CREATE TABLE IF NOT EXISTS Task (id unique, state, taskDesc, createTime, finishedTime)');
+        context.executeSql('CREATE TABLE IF NOT EXISTS Task (id unique, state VARCHAR(20), taskDesc TEXT, createTime TIMESTAMP, finishedTime TIMESTAMP)');
     });
 
     this._db.transaction(function (context) {
@@ -34,7 +34,8 @@ dataPersistService.initData = function (callback) {
 
             var len = results.rows.length, i;
             for (i = 0; i < len; i++) {
-                tasks.push(results.rows.item(i));
+                // 不拷贝的话,safari浏览器会有问题
+                tasks.push(jsc.copyTo(results.rows.item(i), {}));
             }
 
             tasksCache = jsc.createObjectArray(tasks);
@@ -53,6 +54,7 @@ dataPersistService.createTask = function (callback, formData) {
     formData.id = dataPersistService._createTaskId();
     formData.state = taskStates.todo;
     formData.createTime = new Date();
+    formData.finishedTime = null;
 
     this._db.transaction(function (context) {
         context.executeSql("insert into Task(id, state, taskDesc, createTime, finishedTime) values(?,?,?,?,?)", [formData.id, formData.state, formData.taskDesc, formData.createTime, formData.finishedTime]);
@@ -73,11 +75,16 @@ dataPersistService.getTask = function (taskId, callback) {
 };
 
 dataPersistService.deleteTask = function (taskId, callback) {
-    tasksCache.remove({
-        id: taskId
-    });
 
-    callback();
+    this._db.transaction(function (context) {
+        context.executeSql("delete from Task where id = ?", [taskId], function(){
+            tasksCache.remove({
+                id: taskId
+            });
+
+            callback();
+        });
+    });
 };
 
 dataPersistService.finishTask = function (taskId, callback) {
