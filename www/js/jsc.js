@@ -738,6 +738,11 @@
         return Object.prototype.toString.apply(v) === '[object Date]';
     };
 
+    _jsc_date.toIntegerYMD_HMS = function(date){
+        return (date.getFullYear() * 10000 + date.getMonth() * 100 + date.getDate()) * 1000000 +
+            date.getHours() * 10000 + date.getMinutes() * 100 + date.getSeconds();
+    };
+
     /**
      * 获得最晚日期，比如参数为2013/09/01,2013/09/09,
      * 则返回2013/09/09

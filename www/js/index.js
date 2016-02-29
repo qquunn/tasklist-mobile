@@ -25,7 +25,7 @@ dataPersistService.initData = function (callback) {
     this._db = window.openDatabase("tasklist", "1.0", "tasklist", 1000000);
 
     this._db.transaction(function (context) {
-        context.executeSql('CREATE TABLE IF NOT EXISTS Task (id unique, state VARCHAR(20), taskDesc TEXT, createTime TIMESTAMP, finishedTime TIMESTAMP)');
+        context.executeSql('CREATE TABLE IF NOT EXISTS Task (id unique, state VARCHAR(20), taskDesc TEXT, createTime INTEGER, finishedTime INTEGER)');
     });
 
     this._db.transaction(function (context) {
@@ -53,7 +53,7 @@ dataPersistService.getTasks = function (callback) {
 dataPersistService.createTask = function (callback, formData) {
     formData.id = dataPersistService._createTaskId();
     formData.state = taskStates.todo;
-    formData.createTime = new Date();
+    formData.createTime = jsc.date.toIntegerYMD_HMS(new Date());
     formData.finishedTime = null;
 
     this._db.transaction(function (context) {
