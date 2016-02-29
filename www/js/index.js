@@ -3,6 +3,15 @@ var taskStates = {
     todo: 'TODO'
 };
 
+// Task表
+var TaskFields = {
+    id : "id",
+    state : 'state',
+    createTime : 'createTime',
+    finishedTime : 'finishedTime',
+    taskDesc : 'taskDesc'
+};
+
 var paths = {
     TASK_LIST: '/taskList',
     CREATE_TASK: '/createTask',
@@ -11,9 +20,29 @@ var paths = {
 
 var tasksCache = jsc.createObjectArray([]);
 var dataPersistService = {};
+
 dataPersistService.initData = function (callback) {
-    tasksCache = tasksCache = jsc.createObjectArray([]);
-    callback();
+    this._db = window.openDatabase("tasklist", "1.0", "tasklist", 1000000);
+
+    this._db.transaction(function (context) {
+        context.executeSql('CREATE TABLE IF NOT EXISTS Task (id unique, state, taskDesc, createTime, finishedTime)');
+    });
+
+    this._db.transaction(function (context) {
+        context.executeSql('SELECT * FROM Task', [], function (context, results) {
+            var tasks = [];
+
+            var len = results.rows.length, i;
+            for (i = 0; i < len; i++) {
+                tasks.push(results.rows.item(i));
+            }
+
+            tasksCache = jsc.createObjectArray(tasks);
+            callback();
+
+        });
+    });
+
 };
 
 dataPersistService.getTasks = function (callback) {
@@ -24,6 +53,10 @@ dataPersistService.createTask = function (callback, formData) {
     formData.id = dataPersistService._createTaskId();
     formData.state = taskStates.todo;
     formData.createTime = new Date();
+
+    this._db.transaction(function (context) {
+        context.executeSql("insert into Task(id, state, taskDesc, createTime, finishedTime) values(?,?,?,?,?)", [formData.id, formData.state, formData.taskDesc, formData.createTime, formData.finishedTime]);
+    });
 
     tasksCache.insertHead(formData);
     callback(formData);
@@ -60,19 +93,6 @@ dataPersistService.finishTask = function (taskId, callback) {
 dataPersistService._createTaskId = function () {
     return new Date().getTime() + "_" + jsc.nextId();
 };
-
-// 预加载数据
-dataPersistService.initData(function () {
-    // route.start(paths.TASK_LIST, "page");
-});
-
-var Foo = Vue.extend({
-    template: '<p>This is foo!</p>'
-});
-
-var Bar = Vue.extend({
-    template: '<p>This is bar!</p>'
-});
 
 var TaskListComponent = Vue.extend({
     template: '#taskListFragement',
@@ -175,14 +195,7 @@ var App = Vue.extend({
 });
 
 var router = new VueRouter();
-var routerMap = {
-    '/foo': {
-        component: Foo
-    },
-    '/bar': {
-        component: Bar
-    }
-};
+var routerMap = {};
 
 routerMap[paths.TASK_LIST] = {
     component: TaskListComponent
@@ -198,7 +211,9 @@ routerMap[paths.VIEW_TASK] = {
 
 router.map(routerMap);
 
-router.start(App, '#page');
-router.go(paths.TASK_LIST);
 
-
+// 预加载数据
+dataPersistService.initData(function () {
+    router.start(App, '#page');
+    router.go(paths.TASK_LIST);
+});
