@@ -231,5 +231,13 @@ body {
 }
 
 .task-finished {
-    background-color: #ddd;
+    background-color: #f3f3f3;
+}
+
+.finished-button {
+    color : #999;
+}
+
+body {
+    font-family: '微软雅黑';
 }

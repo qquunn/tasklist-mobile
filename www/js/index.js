@@ -29,7 +29,7 @@ dataPersistService.initData = function (callback) {
     });
 
     this._db.transaction(function (context) {
-        context.executeSql('SELECT * FROM Task', [], function (context, results) {
+        context.executeSql('SELECT * FROM Task order by state desc, createTime desc', [], function (context, results) {
             var tasks = [];
 
             var len = results.rows.length, i;
@@ -75,7 +75,6 @@ dataPersistService.getTask = function (taskId, callback) {
 };
 
 dataPersistService.deleteTask = function (taskId, callback) {
-
     this._db.transaction(function (context) {
         context.executeSql("delete from Task where id = ?", [taskId], function(){
             tasksCache.remove({
@@ -88,13 +87,19 @@ dataPersistService.deleteTask = function (taskId, callback) {
 };
 
 dataPersistService.finishTask = function (taskId, callback) {
-    tasksCache.find({
-        id: taskId
-    }).update({
-        state: taskStates.finished
-    });
+    this._db.transaction(function (context) {
+        var finishedTime = jsc.date.toIntegerYMD_HMS(new Date());
+        context.executeSql("update Task set state = ?, finishedTime = ? where id = ?", [taskStates.finished, finishedTime, taskId], function(){
+            tasksCache.find({
+                id: taskId
+            }).update({
+                finishedTime : finishedTime,
+                state: taskStates.finished
+            });
 
-    callback();
+            callback();
+        });
+    });
 };
 
 dataPersistService._createTaskId = function () {
