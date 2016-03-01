@@ -238,3 +238,15 @@ body {
 body {
     font-family: '微软雅黑';
 }
+
+ul {
+    margin-bottom: 0.5rem;
+}
+
+p {
+    margin-bottom: 0.5rem;
+}
+
+.scroll-loading {
+    padding : 0.25rem;
+}

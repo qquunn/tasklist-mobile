@@ -76,7 +76,7 @@ dataPersistService.getTasks = function (callback) {
         return ;
     }else {
         this._db.transaction(function (context) {
-            context.executeSql('SELECT * FROM Task order by state desc, modifiedTime desc', [], function (context, results) {
+            context.executeSql('SELECT * FROM Task order by state desc, modifiedTime desc limit 0,10', [], function (context, results) {
                 var tasks = [];
 
                 var len = results.rows.length, i;
@@ -283,6 +283,16 @@ var App = Vue.extend({
 // 预加载数据
 dataPersistService.initData(function () {
     router.start(App, '#page');
-    router.go(paths.TASK_LIST);
+    router.replace(paths.TASK_LIST);
 });
 
+$(document).bind('scroll', function(e) {
+//    jsc.log($(window).height() + "," +  $(window).scrollTop() + "," + $(document).height());
+    if ($(window).height() + $(window).scrollTop() >= $(document).height() - 20) {
+        jsc.log("加载下一页");
+
+//        currentPage++;
+//        $("#overlay").fadeIn();
+//        loadTweets();
+    }
+});
