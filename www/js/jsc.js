@@ -1694,6 +1694,10 @@ jsc.HtmlNode = (function (jsc, jsc_Map, jsc_array) {
         }
     };
 
+    ObjectArray.prototype.size = function(){
+        return this._data.length;
+    };
+
     jsc.createObjectArray = function(array){
         return new ObjectArray(array);
     };

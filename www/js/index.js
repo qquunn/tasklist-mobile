@@ -70,13 +70,32 @@ dataPersistService.initData = function (callback) {
     });
 };
 
-dataPersistService.getTasks = function (callback) {
+dataPersistService.getMoreTasks = function(offset, limit, callback){
+    this._db.transaction(function (context) {
+        context.executeSql('SELECT * FROM Task order by state desc, modifiedTime desc limit ?,?', [offset, limit], function (context, results) {
+            var tasks = [];
+
+            var len = results.rows.length, i;
+            for (i = 0; i < len; i++) {
+                // 不拷贝的话,safari浏览器会有问题
+                tasks.push(jsc.copyTo(results.rows.item(i), {}));
+            }
+
+            tasksCache.insertAll(tasks);
+            taskListCached = true;
+
+            callback(tasks);
+        });
+    });
+};
+
+dataPersistService.getTasks = function (limit, callback) {
     if(taskListCached){
         callback(tasksCache.data());
         return ;
     }else {
         this._db.transaction(function (context) {
-            context.executeSql('SELECT * FROM Task order by state desc, modifiedTime desc limit 0,10', [], function (context, results) {
+            context.executeSql('SELECT * FROM Task order by state desc, modifiedTime desc limit 0,?', [limit], function (context, results) {
                 var tasks = [];
 
                 var len = results.rows.length, i;
@@ -88,7 +107,7 @@ dataPersistService.getTasks = function (callback) {
                 tasksCache.insertAll(tasks);
 
                 taskListCached = true;
-                callback(tasksCache.data());
+                callback(tasks);
             });
         });
     }
@@ -152,6 +171,8 @@ dataPersistService.finishTask = function (taskId, callback) {
     });
 };
 
+var taskCountPerPage = 10;
+
 var TaskListComponent = Vue.extend({
     template: '#taskListFragement',
     data: function () {
@@ -162,7 +183,7 @@ var TaskListComponent = Vue.extend({
 
     route : {
         data: function (transition) {
-            dataPersistService.getTasks(function(data){
+            dataPersistService.getTasks(taskCountPerPage, function(data){
                 transition.next({
                     tasks : data
                 });
@@ -184,6 +205,21 @@ var TaskListComponent = Vue.extend({
             } else {
                 this.viewTask(taskId);
             }
+        },
+
+        onShowMore : function(e){
+            var currentCount = tasksCache.size();
+            var self = this;
+            dataPersistService.getMoreTasks(currentCount, taskCountPerPage, function(data){
+                var result = [];
+                jsc.array.addAll(result, self._data.tasks);
+                jsc.array.addAll(result, data);
+                self._data.tasks = result;
+
+                if(data.length < taskCountPerPage){
+                    $(e.target).hide();
+                }
+            });
         },
 
         viewTask: function (taskId) {
@@ -284,15 +320,4 @@ var App = Vue.extend({
 dataPersistService.initData(function () {
     router.start(App, '#page');
     router.replace(paths.TASK_LIST);
-});
-
-$(document).bind('scroll', function(e) {
-//    jsc.log($(window).height() + "," +  $(window).scrollTop() + "," + $(document).height());
-    if ($(window).height() + $(window).scrollTop() >= $(document).height() - 20) {
-        jsc.log("加载下一页");
-
-//        currentPage++;
-//        $("#overlay").fadeIn();
-//        loadTweets();
-    }
 });
