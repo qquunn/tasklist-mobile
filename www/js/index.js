@@ -179,6 +179,7 @@ var TaskListComponent = Vue.extend({
     template: '#taskListFragement',
     data: function () {
         return {
+			showMoreVisible : false,
             tasks: []
         }
     },
@@ -186,8 +187,11 @@ var TaskListComponent = Vue.extend({
     route : {
         data: function (transition) {
             dataPersistService.getTasks(taskCountPerPage, function(data){
+				var showMoreVisible = data.length == taskCountPerPage;				
+			
                 transition.next({
-                    tasks : data
+                    tasks : data,
+					showMoreVisible : showMoreVisible
                 });
             });
         }
