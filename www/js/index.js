@@ -39,6 +39,8 @@ var paths = {
 };
 
 var tasksCache = jsc.createObjectArray([]);
+var taskListCached = false;
+
 tasksCache.resort = function(){
     var tasksSortFunction = function(o, o2){
         var v1 = jsc.compareString(o.state, o2.state);
@@ -62,30 +64,34 @@ dataPersistService.initData = function (callback) {
     this._db = window.openDatabase("tasklist", "1.0", "tasklist", 1000000);
 
     this._db.transaction(function (context) {
-        context.executeSql('CREATE TABLE IF NOT EXISTS Task (id unique, state VARCHAR(20), taskDesc TEXT, modifiedTime INTEGER, createTime INTEGER, finishedTime INTEGER)');
-    });
-
-    this._db.transaction(function (context) {
-        context.executeSql('SELECT * FROM Task order by state desc, modifiedTime desc', [], function (context, results) {
-            var tasks = [];
-
-            var len = results.rows.length, i;
-            for (i = 0; i < len; i++) {
-                // 不拷贝的话,safari浏览器会有问题
-                tasks.push(jsc.copyTo(results.rows.item(i), {}));
-            }
-
-            tasksCache.insertAll(tasks);
-
+        context.executeSql('CREATE TABLE IF NOT EXISTS Task (id unique, state VARCHAR(20), taskDesc TEXT, modifiedTime INTEGER, createTime INTEGER, finishedTime INTEGER)', [], function(){
             callback();
-
         });
     });
-
 };
 
 dataPersistService.getTasks = function (callback) {
-    callback(tasksListCache.data());
+    if(taskListCached){
+        callback(tasksCache.data());
+        return ;
+    }else {
+        this._db.transaction(function (context) {
+            context.executeSql('SELECT * FROM Task order by state desc, modifiedTime desc', [], function (context, results) {
+                var tasks = [];
+
+                var len = results.rows.length, i;
+                for (i = 0; i < len; i++) {
+                    // 不拷贝的话,safari浏览器会有问题
+                    tasks.push(jsc.copyTo(results.rows.item(i), {}));
+                }
+
+                tasksCache.insertAll(tasks);
+
+                taskListCached = true;
+                callback(tasksCache.data());
+            });
+        });
+    }
 };
 
 dataPersistService.createTask = function (callback, formData) {
@@ -150,9 +156,20 @@ var TaskListComponent = Vue.extend({
     template: '#taskListFragement',
     data: function () {
         return {
-            tasks: tasksCache.data()
+            tasks: []
         }
     },
+
+    route : {
+        data: function (transition) {
+            dataPersistService.getTasks(function(data){
+                transition.next({
+                    tasks : data
+                });
+            });
+        }
+    },
+
     methods: {
         onTaskItemClick: function (e) {
             var $ele = $(e.target);
@@ -260,8 +277,12 @@ routerMap[paths.VIEW_TASK] = {
 
 router.map(routerMap);
 
+var App = Vue.extend({
+});
 
 // 预加载数据
 dataPersistService.initData(function () {
-    router.start(TaskListComponent, '#page');
+    router.start(App, '#page');
+    router.go(paths.TASK_LIST);
 });
+
