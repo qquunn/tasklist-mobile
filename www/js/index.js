@@ -243,9 +243,6 @@ var ViewTaskComponent = Vue.extend({
     }
 });
 
-var App = Vue.extend({
-});
-
 var router = new VueRouter();
 var routerMap = {};
 
@@ -266,6 +263,5 @@ router.map(routerMap);
 
 // 预加载数据
 dataPersistService.initData(function () {
-    router.start(App, '#page');
-    router.go(paths.TASK_LIST);
+    router.start(TaskListComponent, '#page');
 });
