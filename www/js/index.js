@@ -125,7 +125,9 @@ dataPersistService.createTask = function (callback, formData) {
 
             callback(formData);
 
-        });
+        }, function(e, e2){
+			jsc.log("insert task失败" + e2.code + "," + e2.message);
+		});
     });
 };
 
