@@ -7,9 +7,29 @@ var taskStates = {
 var TaskFields = {
     id : "id",
     state : 'state',
+    modifiedTime : 'modifiedTime',
     createTime : 'createTime',
     finishedTime : 'finishedTime',
     taskDesc : 'taskDesc'
+};
+
+var taskMethods = {};
+taskMethods.createTask = function(task){
+    task.id = taskMethods._createTaskId();
+    task.state = taskStates.todo;
+    task.createTime = jsc.date.toIntegerYMD_HMS(new Date());
+    task.finishedTime = null;
+    task.modifiedTime = task.createTime;
+};
+
+taskMethods.finishTask = function(task, finishedTime){
+    task.modifiedTime = task.finishedTime;
+    task.finishedTime = finishedTime;
+    task.state = taskStates.finished;
+};
+
+taskMethods._createTaskId = function () {
+    return new Date().getTime() + "_" + jsc.nextId();
 };
 
 var paths = {
@@ -19,17 +39,34 @@ var paths = {
 };
 
 var tasksCache = jsc.createObjectArray([]);
+tasksCache.resort = function(){
+    var tasksSortFunction = function(o, o2){
+        var v1 = jsc.compareString(o.state, o2.state);
+        v1 = - v1;
+        if(v1 == 0){
+            var v2 = o.modifiedTime - o2.modifiedTime;
+            v2 = - v2;
+
+            return v2;
+        }else {
+            return v1;
+        }
+    };
+
+    tasksCache.applySort(tasksSortFunction);
+};
+
 var dataPersistService = {};
 
 dataPersistService.initData = function (callback) {
     this._db = window.openDatabase("tasklist", "1.0", "tasklist", 1000000);
 
     this._db.transaction(function (context) {
-        context.executeSql('CREATE TABLE IF NOT EXISTS Task (id unique, state VARCHAR(20), taskDesc TEXT, createTime INTEGER, finishedTime INTEGER)');
+        context.executeSql('CREATE TABLE IF NOT EXISTS Task (id unique, state VARCHAR(20), taskDesc TEXT, modifiedTime INTEGER, createTime INTEGER, finishedTime INTEGER)');
     });
 
     this._db.transaction(function (context) {
-        context.executeSql('SELECT * FROM Task order by state desc, createTime desc', [], function (context, results) {
+        context.executeSql('SELECT * FROM Task order by state desc, modifiedTime desc', [], function (context, results) {
             var tasks = [];
 
             var len = results.rows.length, i;
@@ -38,7 +75,8 @@ dataPersistService.initData = function (callback) {
                 tasks.push(jsc.copyTo(results.rows.item(i), {}));
             }
 
-            tasksCache = jsc.createObjectArray(tasks);
+            tasksCache.insertAll(tasks);
+
             callback();
 
         });
@@ -47,21 +85,23 @@ dataPersistService.initData = function (callback) {
 };
 
 dataPersistService.getTasks = function (callback) {
-    callback(tasksCache.data());
+    callback(tasksListCache.data());
 };
 
 dataPersistService.createTask = function (callback, formData) {
-    formData.id = dataPersistService._createTaskId();
-    formData.state = taskStates.todo;
-    formData.createTime = jsc.date.toIntegerYMD_HMS(new Date());
-    formData.finishedTime = null;
+    taskMethods.createTask(formData);
 
     this._db.transaction(function (context) {
-        context.executeSql("insert into Task(id, state, taskDesc, createTime, finishedTime) values(?,?,?,?,?)", [formData.id, formData.state, formData.taskDesc, formData.createTime, formData.finishedTime]);
-    });
+        context.executeSql("insert into Task(id, state, taskDesc, createTime, finishedTime, modifiedTime) values(?,?,?,?,?, ?)",
+            [formData.id, formData.state, formData.taskDesc, formData.createTime, formData.finishedTime, formData.modifiedTime], function(){
 
-    tasksCache.insertHead(formData);
-    callback(formData);
+            tasksCache.insertHead(formData);
+            tasksCache.resort();
+
+            callback(formData);
+
+        });
+    });
 };
 
 dataPersistService.getTask = function (taskId, callback) {
@@ -89,21 +129,21 @@ dataPersistService.deleteTask = function (taskId, callback) {
 dataPersistService.finishTask = function (taskId, callback) {
     this._db.transaction(function (context) {
         var finishedTime = jsc.date.toIntegerYMD_HMS(new Date());
-        context.executeSql("update Task set state = ?, finishedTime = ? where id = ?", [taskStates.finished, finishedTime, taskId], function(){
+        var modifiedTime = finishedTime;
+        context.executeSql("update Task set state = ?, finishedTime = ?, modifiedTime = ? where id = ?", [taskStates.finished, finishedTime, modifiedTime, taskId], function(){
             tasksCache.find({
                 id: taskId
             }).update({
-                finishedTime : finishedTime,
-                state: taskStates.finished
+                state: taskStates.finished,
+                modifiedTime: modifiedTime,
+                finishedTime: finishedTime
             });
+
+            tasksCache.resort();
 
             callback();
         });
     });
-};
-
-dataPersistService._createTaskId = function () {
-    return new Date().getTime() + "_" + jsc.nextId();
 };
 
 var TaskListComponent = Vue.extend({

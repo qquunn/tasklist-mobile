@@ -1645,6 +1645,10 @@ jsc.HtmlNode = (function (jsc, jsc_Map, jsc_array) {
         jsc.array.add(this._data, record, 0);
     };
 
+    ObjectArray.prototype.insertAll = function(array){
+        jsc.array.addAll(this._data, array);
+    };
+
     ObjectArray.prototype.find = function(condition){
         var subarray = [];
 
@@ -1684,8 +1688,24 @@ jsc.HtmlNode = (function (jsc, jsc_Map, jsc_array) {
         return this._data[index];
     };
 
+    ObjectArray.prototype.applySort = function(sortFunction){
+        if(this._data){
+            this._data.sort(sortFunction);
+        }
+    };
+
     jsc.createObjectArray = function(array){
         return new ObjectArray(array);
+    };
+
+    jsc.compareString = function(str, str2){
+        if(str < str2){
+            return -1;
+        }else if(str == str2){
+            return 0;
+        }else {
+            return 1;
+        }
     };
 
 })();
