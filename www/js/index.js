@@ -61,7 +61,7 @@ tasksCache.resort = function(){
 var dataPersistService = {};
 
 dataPersistService.initData = function (callback) {
-    this._db = window.openDatabase("tasklist", "1.0", "tasklist", 1000000);
+    this._db = window.openDatabase("tasklist", "1.0", "tasklist", 1024 * 1024);
 
     this._db.transaction(function (context) {
         context.executeSql('CREATE TABLE IF NOT EXISTS Task (id unique, state VARCHAR(20), taskDesc TEXT, modifiedTime INTEGER, createTime INTEGER, finishedTime INTEGER)', [], function(){
